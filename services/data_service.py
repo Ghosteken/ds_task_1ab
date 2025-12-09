@@ -25,11 +25,10 @@ class DataService:
             )
 
     def _clean(self):
-        self.df = self.df.drop_duplicates()
         self.df = self.df.fillna("")
         if "Description" in self.df.columns:
             self.df["Description"] = self.df["Description"].astype(str).str.strip()
+        self.df = self.df.drop_duplicates()
 
     def get_products(self) -> pd.DataFrame:
         return self.df.copy()
-
