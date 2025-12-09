@@ -1,5 +1,4 @@
 import os
-from PIL import Image
 
 
 class OCRService:
@@ -15,9 +14,12 @@ class OCRService:
             self._configured = False
 
     def extract_text(self, image_path: str) -> str:
-        from PIL import Image
-        import importlib
-        pyt = importlib.import_module("pytesseract")
-        img = Image.open(image_path)
-        text = pyt.image_to_string(img)
-        return text.strip()
+        try:
+            import importlib
+            from PIL import Image
+            pyt = importlib.import_module("pytesseract")
+            img = Image.open(image_path)
+            text = pyt.image_to_string(img)
+            return text.strip()
+        except Exception:
+            return ""

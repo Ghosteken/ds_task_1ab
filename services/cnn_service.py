@@ -5,6 +5,7 @@ class CNNService:
     def __init__(self, model_path: str = "models/product_cnn.h5"):
         self.model_path = model_path
         self.model = None
+        self.labels_path = os.path.join(os.path.dirname(self.model_path), "labels.txt")
         if os.path.exists(self.model_path):
             try:
                 from tensorflow.keras.models import load_model
@@ -29,6 +30,7 @@ class CNNService:
 
     def train_from_dir(self, data_dir: str, epochs: int = 5, batch_size: int = 32):
         from tensorflow.keras.preprocessing.image import ImageDataGenerator
+        datagen = ImageDataGenerator(rescale=1.0/255.0, validation_split=0.2)
         train_gen = datagen.flow_from_directory(
             data_dir,
             target_size=(128, 128),
@@ -47,6 +49,12 @@ class CNNService:
         self.model.fit(train_gen, validation_data=val_gen, epochs=epochs)
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         self.model.save(self.model_path)
+        index_to_class = [None] * len(train_gen.class_indices)
+        for cls_name, idx in train_gen.class_indices.items():
+            index_to_class[idx] = cls_name
+        with open(self.labels_path, "w", encoding="utf-8") as f:
+            for name in index_to_class:
+                f.write(f"{name}\n")
 
     def predict_class(self, image_path: str) -> str:
         if self.model is None:
@@ -58,4 +66,12 @@ class CNNService:
         arr = np.expand_dims(arr, axis=0)
         preds = self.model.predict(arr)
         idx = int(np.argmax(preds, axis=1)[0])
+        try:
+            if os.path.exists(self.labels_path):
+                with open(self.labels_path, "r", encoding="utf-8") as f:
+                    labels = [line.strip() for line in f if line.strip()]
+                if 0 <= idx < len(labels):
+                    return labels[idx]
+        except Exception:
+            pass
         return str(idx)
