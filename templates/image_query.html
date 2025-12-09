@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Image Query (OCR)</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        input, button { padding: 8px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style>
+    <script>
+        async function submitImage(){
+            const file = document.getElementById('img').files[0];
+            const fd = new FormData();
+            fd.append('image_data', file);
+            const res = await fetch('/ocr-query', { method:'POST', body: fd });
+            const data = await res.json();
+            document.getElementById('extracted').innerText = data.extracted_text || '';
+            document.getElementById('resp').innerText = data.response;
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+            (data.products || []).forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${p.StockCode}</td><td>${p.Description}</td><td>${p.UnitPrice}</td><td>${p.Country}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Image Query Interface</h1>
+    <input type="file" id="img" accept="image/*" />
+    <button onclick="submitImage()">Process</button>
+    <h3>Extracted Text</h3>
+    <div id="extracted"></div>
+    <h3>Response</h3>
+    <div id="resp"></div>
+    <h3>Products</h3>
+    <table>
+        <thead>
+            <tr><th>Stock Code</th><th>Description</th><th>Unit Price</th><th>Country</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+</body>
+</html>
+

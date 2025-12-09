@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Product Image Detection</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        input, button { padding: 8px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style>
+    <script>
+        async function submitImage(){
+            const file = document.getElementById('img').files[0];
+            const fd = new FormData();
+            fd.append('product_image', file);
+            const res = await fetch('/image-product-search', { method:'POST', body: fd });
+            const data = await res.json();
+            document.getElementById('class').innerText = data.class || '';
+            document.getElementById('resp').innerText = data.response || '';
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+            (data.products || []).forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${p.StockCode}</td><td>${p.Description}</td><td>${p.UnitPrice}</td><td>${p.Country}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Product Image Upload Interface</h1>
+    <input type="file" id="img" accept="image/*" />
+    <button onclick="submitImage()">Detect</button>
+    <h3>Predicted Class</h3>
+    <div id="class"></div>
+    <h3>Response</h3>
+    <div id="resp"></div>
+    <h3>Products</h3>
+    <table>
+        <thead>
+            <tr><th>Stock Code</th><th>Description</th><th>Unit Price</th><th>Country</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
+</body>
+</html>
+
