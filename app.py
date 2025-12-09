@@ -6,6 +6,7 @@ from services.vector_service import VectorService
 from services.recommendation_service import RecommendationService
 from services.ocr_service import OCRService
 from services.cnn_service import CNNService
+from services.pinecone_service import PineconeService
 
 app = Flask(__name__)
 data_service = DataService()
@@ -13,6 +14,17 @@ vector_service = VectorService(data_service.get_products()["Description"].tolist
 reco_service = RecommendationService(data_service, vector_service)
 ocr_service = OCRService()
 cnn_service = CNNService()
+pinecone_service = None
+try:
+    df_init = data_service.get_products()
+    mat = vector_service.matrix.toarray().tolist()
+    ids = df_init["StockCode"].astype(str).tolist()
+    pinecone_service = PineconeService(index_name="products-index", dimension=len(mat[0]))
+    if pinecone_service and pinecone_service.index is not None:
+        meta = [{"Description": d} for d in df_init["Description"].astype(str).tolist()]
+        pinecone_service.upsert_vectors(ids, mat, meta)
+except Exception:
+    pinecone_service = None
 
 @app.route('/product-recommendation', methods=['POST'])
 def product_recommendation():
@@ -22,6 +34,23 @@ def product_recommendation():
     Output: JSON with 'products' (array of objects) and 'response' (string).
     """
     query = request.form.get('query', '')
+    if pinecone_service and pinecone_service.index is not None:
+        q_vec = vector_service.vectorizer.transform([query]).toarray().flatten().tolist()
+        matches = pinecone_service.query(q_vec, top_k=5)
+        df = data_service.get_products()
+        items = []
+        for m in matches:
+            row = df[df["StockCode"].astype(str) == str(m.id)].iloc[0]
+            items.append({
+                "StockCode": str(row.get("StockCode", "")),
+                "Description": str(row.get("Description", "")),
+                "UnitPrice": float(row.get("UnitPrice", 0.0)),
+                "Country": str(row.get("Country", "")),
+                "similarity": float(getattr(m, "score", 0.0)),
+            })
+        names = ", ".join(x["Description"] for x in items)
+        resp = f"Recommended products: {names}." if items else "No matching products found."
+        return jsonify({"products": items, "response": resp})
     result = reco_service.recommend(query)
     return jsonify(result)
 

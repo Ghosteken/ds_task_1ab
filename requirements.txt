@@ -7,3 +7,4 @@ beautifulsoup4
 pillow
 pytesseract
 tensorflow==2.15.0
+pinecone-client
